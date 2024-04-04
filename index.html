@@ -84,8 +84,37 @@
                 type: 'POST',
                 data: { queryTerm: searchTerm },
                 success: function(response) {
-                    $('#successMessage').text(response.term + ' ' + response.status).show();
-                },
+
+                var resultsHtml = '<p>Your search was executed in ' + response.execution_time + ' ms</p>';
+
+                if (response.result) {
+                    resultsHtml += '<table border="1" style="border-collapse: collapse; width: 100%;">';
+                    resultsHtml += '<tr><th>Doc ID</th><th>Doc Folder</th><th>Doc Name</th><th>Frequencies</th></tr>';
+
+                    var docId = 1; // Start doc ID at 1
+                    response.result.forEach(function(doc) {
+                        // Assuming 'doc' has a 'path' property and a 'frequency' property
+                        var pathSegments = doc.path.split('/'); // Split the path by '/'
+                        var docFolder = pathSegments.slice(0, -1).join('/'); // Join all but the last segment to get the folder path
+                        var docName = pathSegments.slice(-1)[0]; // The last segment is the document name
+
+                        resultsHtml += '<tr>';
+                        resultsHtml += '<td>' + (docId++) + '</td>'; // Increment doc ID for each entry
+                        resultsHtml += '<td>' + docFolder + '</td>';
+                        resultsHtml += '<td>' + docName + '</td>';
+                        resultsHtml += '<td>' + doc.frequency + '</td>';
+                        resultsHtml += '</tr>';
+                    });
+
+                    resultsHtml += '</table>';
+                } else {
+                    resultsHtml += '<p>No results found</p>';
+                }
+                // TODO
+                $("#result_header").html(resultsHtml);
+                $("#result_header").css("text-align", "left");
+            },
+
                 error: function(xhr, status, error) {
                     // Handle errors
                     $('#successMessage').text('Error performing search').show();
@@ -96,13 +125,33 @@
 
         function performTopN() {
             var nValue = $('#numberN').val();
-
+            alert("Top " + nValue +" searching...");
             $.ajax({
                 url: '/topN', 
                 type: 'POST',
                 data: { numberN: nValue },
-                success: function(response) {
-                    $('#successMessage').text(response.status).show();
+                success: function(data) {
+                    let contentHtml = '<p>Top-N  Frequent Terms:</p>';
+                    if (data.output) {
+                        contentHtml += '<div style="margin-top: 10px;"><table style="border: 2px solid #ddd; width: 100%;">';
+                        contentHtml += '<thead><tr style="background-color: #eee;"><th>Term</th><th>Total Frequencies</th></tr></thead>';
+                        contentHtml += '<tbody>';
+                        
+                        data.output.forEach(function(element) {
+                            let keyword = element[0];
+                            let frequency = element[1];
+                            contentHtml += `<tr><td>${keyword}</td><td>${frequency}</td></tr>`;
+                        });
+
+                        contentHtml += '</tbody></table></div>';
+                        contentHtml += `<div style="margin-top: 10px;"><p>Query completed in ${data.executionTime} milliseconds</p></div>`;
+                    } else {
+                        contentHtml += '<p>No keywords found.</p>';
+                    }
+                
+                    // TODO
+                    $("#resultsDisplay").html(contentHtml);
+                    $("#resultsDisplay").css({"text-align": "left", "padding": "10px"});
                 },
                 error: function(xhr, status, error) {
                     // Handle errors
