@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Search Engine Interface</title>
+    <style>
+        .center { text-align: center; margin-top: 100px; }
+        #fileChooser, #searchInputSection, #topNSection { display: none; }
+        #successMessage { display: none; color: green; }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div>
+        <h2>MITEAM Search Engine</h2>
+    </div>
+    <div class="center">
+        <h1 id="mainHeader">14848 Engine</h1>
+        <button id="selectFiles" onclick="$('#fileChooser').click();">Select Files</button>
+        <input type="file" id="fileChooser" multiple>
+        <div id="fileList"></div>
+        <button id="buildIndexBtn" onclick="buildIndices()">Build Indices</button>
+        <div id="successMessage">Indices built successfully! Engine was loaded!</div>
+        <button id="querySearchBtn" onclick="$('#searchInputSection').show(); 
+                                             $('#selectFiles').hide(); 
+                                             $('#fileList').hide();  
+                                             $('#successMessage').hide();
+                                             $('#querySearchBtn').hide();
+                                             $('#queryTopNBtn').hide();">Query Search</button>
+        <button id="queryTopNBtn" onclick="$('#topNSection').show(); 
+                                           $('#selectFiles').hide(); 
+                                           $('#fileList').hide();  
+                                           $('#successMessage').hide();
+                                           $('#querySearchBtn').hide();
+                                           $('#queryTopNBtn').hide();">Query Top-N</button>
+        <div id="searchInputSection" style="margin-top: 20px;">
+            <input type="text" id="queryTerm" placeholder="Enter Search Term...">
+            <button onclick="performSearch()">Search</button>
+        </div>
+        <div id="topNSection" style="margin-top: 20px;">
+            <input type="number" id="numberN" placeholder="Enter N...">
+            <button onclick="performTopN()">Search</button>
+        </div>
+    </div>
+    <script>
+        $(document).ready(function() {
+            $('#buildIndexBtn, #querySearchBtn, #queryTopNBtn, #searchInputSection, #topNSection').hide();
+            $('#fileChooser').change(function() {
+                if(this.files.length > 0) {
+                    $('#buildIndexBtn').show();
+                    var selectedFiles = $.map(this.files, file => file.name).join(", ");
+                    $('#fileList').text(`Selected files: ${selectedFiles}`);
+                }
+            });
+        });
+
+        function buildIndices() {
+            var formData = new FormData();
+            $.each($('#fileChooser')[0].files, function(i, file) {
+                formData.append('files[]', file);
+            });
+
+            $.ajax({
+                url: '/build_indices',
+                type: 'POST',
+                data: formData,
+                contentType: false,
+                processData: false, 
+                success: function(response) {
+                    $('#fileChooser, #buildIndexBtn').hide(); 
+                    $('#successMessage').text(response.status).show();
+                    $('#querySearchBtn, #queryTopNBtn').show();
+                },
+                error: function() {
+                    $('#successMessage').text('Error building indices.').show();
+                }
+            });
+        }
+
+        function performSearch() {
+            var searchTerm = $('#queryTerm').val();
+
+            $.ajax({
+                url: '/search', 
+                type: 'POST',
+                data: { queryTerm: searchTerm },
+                success: function(response) {
+                    $('#successMessage').text(response.term + ' ' + response.status).show();
+                },
+                error: function(xhr, status, error) {
+                    // Handle errors
+                    $('#successMessage').text('Error performing search').show();
+                }
+            });
+        }
+
+
+        function performTopN() {
+            var nValue = $('#numberN').val();
+
+            $.ajax({
+                url: '/topN', 
+                type: 'POST',
+                data: { numberN: nValue },
+                success: function(response) {
+                    $('#successMessage').text(response.status).show();
+                },
+                error: function(xhr, status, error) {
+                    // Handle errors
+                    $('#successMessage').text('Error processing Top-N').show();
+                }
+            });
+        }
+    </script>
+</body>
+</html>
